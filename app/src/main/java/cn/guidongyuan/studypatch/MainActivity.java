@@ -1,10 +1,15 @@
 package cn.guidongyuan.studypatch;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Environment;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.content.FileProvider;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -17,6 +22,8 @@ import java.io.File;
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
+    private static final int MY_PERMISSIONS_REQUEST_STORAGE = 1;
+
     // Used to load the 'native-lib' library on application startup.
     static {
         System.loadLibrary("native-lib");
@@ -30,10 +37,27 @@ public class MainActivity extends AppCompatActivity {
         textView.setText(BuildConfig.VERSION_NAME);
     }
 
+
     /**
      * 更新
      */
     public void update(View view) {
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE},
+                    MY_PERMISSIONS_REQUEST_STORAGE);
+        }else {
+            downLoadApkPatch();
+        }
+
+    }
+
+    /**
+     * 模拟下载，合并应用包，跳转安装
+     */
+    private void downLoadApkPatch() {
         new AsyncTask<Void,Void,File>() {
 
             @Override
@@ -87,4 +111,19 @@ public class MainActivity extends AppCompatActivity {
      * @param patchFile 合并后新包路径
      */
     private native void native_bspatch(String oldApk,String newApk,String patchFile);
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        switch (requestCode) {
+            case MY_PERMISSIONS_REQUEST_STORAGE:{
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    downLoadApkPatch();
+                }
+            }
+            break;
+            default:
+                break;
+        }
+    }
 }
